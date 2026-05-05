@@ -6,6 +6,8 @@
 
 import re
 
+import torch
+
 print("\nLearning LLMs from Scratch - Aayush Kumar")
 
 print(f"="*50)
@@ -183,9 +185,70 @@ for i in range(1, contextSize + 1):
 #             [    ...   ]])
 
 from torch.utils.data import Dataset, DataLoader
+import torch
 
 class GPTDataset(Dataset):
     def __init__(self, txt, tokenizer, maxLen, stride):
         self.inputIds = []
         self.targetIds = []
-        
+
+        tokenIds = tokenizer.encode(txt, allowed_special={"<|endoftext|>"})
+        # input ids are the first 4 tokens, target ids are the next 4 tokens
+        # then we shift by stride and repeat
+        for i in range(0, len(tokenIds) - maxLen, stride):
+            inputId = tokenIds[i:i+maxLen]
+            targetId = tokenIds[i+1:i+maxLen+1]
+
+            self.inputIds.append(inputId)
+            self.targetIds.append(targetId)
+
+    def __len__(self):
+        return len(self.inputIds)
+    
+    def __getitem__(self, idx):
+        # By returning tensors here, the DataLoader knows exactly how to stack them into a batch
+        return torch.tensor(self.inputIds[idx]), torch.tensor(self.targetIds[idx])
+
+# dataSet is GPT dataset, dataloader is a wrapper around the dataset that allows us to iterate through it in batches
+# batch size is how many batches the model processes at once, before updating the weights
+# maxLen is the context size, stride is how much we shift the window by to create the next input-target pair
+# numWorkers is how many parallel processes to use for loading the data, 0 means use the main process
+def createDataLoader(txt, batchSize=4, maxLen=256, stride=128, shuffle=True, dropLast=True, numWorkers=0):
+    tokenizer = tiktoken.get_encoding("gpt2")
+    dataset = GPTDataset(txt, tokenizer, maxLen, stride)
+    dataloader = DataLoader(dataset, batch_size=batchSize, shuffle=shuffle, drop_last=dropLast, num_workers=numWorkers)
+    return dataloader
+
+# lets test dataloader with batch size 1 and context size 4
+print("\n" + f"="*50)
+print("Part 5: DataLoader")
+print(f"="*50, "")
+
+# input size/context size of 4 is pretty small, 256 is more standard
+dataloader = createDataLoader(raw_text, batchSize=1, maxLen=4, stride=1, shuffle=False)
+dataIter = iter(dataloader)
+firstBatch = next(dataIter)
+print("Batch 1 (size 1) (input ids, target ids):\n", firstBatch, "\n")
+print("Batch 2 (size 1) (input ids, target ids):\n", next(dataIter), "\n")
+
+# stride = 4, batch size = 8
+# 8 arrays in tensor, and inputIds and targetIds are shifted by 4 tokens
+# so no overlap in inputs, and no overlaps in inputs tensor and targets tensor
+dataloader8 = createDataLoader(raw_text, batchSize=8, maxLen=4, stride=4, shuffle=False)
+dataIter8 = iter(dataloader8)
+inputIds8, targetIds8 = next(dataIter8)
+print("Batch 1 (size 8, stride 4) input ids:\n", inputIds8, "\n")
+print("Batch 1 (size 8, stride 4) target ids:\n", targetIds8, "\n")
+
+print("="*50)
+print("Part 6: Token / Vector Embeddings")
+print("="*50, "")
+# convert input-target pairs into vector embeddings
+# these token embeddings are the input to the model
+# currently token ids are just ramdom numbers
+# for ex. cat and kitten are semantically realed but
+# their token id cat = 34, kitten = -13 does NOT represent any relatoinship
+# vector embeddings represent these relationships
+# the closer two vectors are, the closer they are in vector space
+
+
