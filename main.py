@@ -251,4 +251,17 @@ print("="*50, "")
 # vector embeddings represent these relationships
 # the closer two vectors are, the closer they are in vector space
 
+# ex vector v = [has_a_tail, is_eatable, has_4_legs, makes_sound, is_a_pet]
+# dog = [23, 2, 19, 12, 35]
+# cat = [31, 3, 21, 18, 31]
+# apple = [1, 22, 0, 0.5, 5]
+# banana = [2, 38, 0, 0.2, 7]
+# v = [fn, fn-1,..., f0] where f is the list of features like has_a_tail, is_eatable, etc.
+
+# to create these vector embeddings, we must train a NN to actuall make these vector embeddings
+# like King + Woman - Man = Queen (0.711), Monarch (0.618), Princess (0.552), etc.
+# "woman" and "man" have a similarity of 0.766, same for "uncle" and "aunt"
+
+# vectors are vocabSize * vectorDimension
+
 
